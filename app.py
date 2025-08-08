@@ -87,7 +87,7 @@ filtered_df = filtered_df.sort_values(by="TabNo", ascending=True)
 # Columns to display
 display_cols = [
     "Track", "TabNo", "Name", "Jockey.FullName", "Trainer.FullName",
-    "NormalizedWinProbability", "Price", "Weight", "Barrier_x", "Last10",
+    "NormalizedWinProbability","Odds", "Price", "Weight", "Barrier_x", "Last10",
     "RaceId", "RunnerId"
 ]
 
