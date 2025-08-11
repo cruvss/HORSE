@@ -131,7 +131,7 @@ filtered_df = add_model_odds(filtered_df, bayesian_df, "BayesianNew")
 # --- Display ---
 DISPLAY_COLS = [
     "Track", "TabNo", "Name", "Jockey.FullName", "Trainer.FullName",
-    "NormalizedWinProbability", "Odds", "Odds_Logistic", "Odds_XGBoost", "Odds_BayesianNew",
+     "Odds", "Odds_Logistic", "Odds_XGBoost", "Odds_BayesianNew",
     "Price", "Weight", "Barrier_x", "Last10", "RaceId", "RunnerId"
 ]
 
@@ -140,7 +140,7 @@ FRIENDLY_NAMES = {
     "Name": "Horse",
     "Jockey.FullName": "Jockey",
     "Trainer.FullName": "Trainer",
-    "NormalizedWinProbability": "Win Prob",
+    #"NormalizedWinProbability": "Win Prob",
     "Barrier_x": "Barrier",
     "Last10": "Last 10",
     "RaceId": "Race ID",
