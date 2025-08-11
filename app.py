@@ -27,26 +27,26 @@ if not st.session_state["authenticated"]:
 # --- Main App ---
 st.set_page_config(page_title="Horse Racing Dashboard", layout="wide")
 
-# Model configuration
+# Model files
 MODEL_FILES = {
     "RandomForest": "random_forest.csv",
     "Logistic": "logistic.csv",
-    "XGBoost": "xgboost.csv"
+    "XGBoost": "xgboost.csv",
+    "BayesianNew": "bayesian.csv"
 }
 
-# Initialize session state
-if "selected_model" not in st.session_state:
-    st.session_state["selected_model"] = "RandomForest"
-
+# Load data
 @st.cache_data
 def load_data(filename):
-    return pd.read_csv(filename, parse_dates=["MeetingDate"])
+    return pd.read_csv(filename)
 
-# Load data based on selected model
 try:
-    df = load_data(MODEL_FILES[st.session_state["selected_model"]])
-except FileNotFoundError:
-    st.error(f"Data file not found for {st.session_state['selected_model']} model")
+    base_df = load_data(MODEL_FILES["RandomForest"])
+    logistic_df = load_data(MODEL_FILES["Logistic"])
+    xgboost_df = load_data(MODEL_FILES["XGBoost"])
+    bayesian_df = load_data(MODEL_FILES["BayesianNew"])
+except FileNotFoundError as e:
+    st.error(f"Data file not found: {e}")
     st.stop()
 
 # --- Header Section ---
@@ -69,83 +69,70 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 with st.container():
-    col_date, col_track, col_race, col_model, col_space, col_download = st.columns([2, 2, 2, 3,4, 3])
+    col_date, col_track, col_race, col_space, col_download = st.columns([3, 3, 3, 5, 3])
 
     # Date selection
     with col_date:
-        selected_date = st.date_input("📅 Date", df["MeetingDate"].max())
-    
+        base_df['MeetingDate'] = pd.to_datetime(base_df['MeetingDate'], errors='coerce')
+        selected_date = st.date_input("📅 Date", base_df["MeetingDate"].max()) 
+        print(selected_date)
+        print(type(selected_date))
+
     # Filter data for selected date
-    day_df = df[df["MeetingDate"] == pd.to_datetime(selected_date)]
-    filtered_df = df[df["MeetingDate"] == pd.to_datetime(selected_date)]
+    day_df = base_df[base_df["MeetingDate"] == pd.to_datetime(selected_date)]
+    if day_df.empty:
+        st.error("No data for selected date.")
+        st.stop()
 
     # Track selection
     with col_track:
         track_options = day_df["Track"].dropna().unique()
-        if len(track_options) == 0:
-            st.error("No data for selected date and model.")
-            st.stop()
         selected_track = st.selectbox("📍 Track", sorted(track_options))
 
     # Race selection
     with col_race:
         race_options = day_df[day_df["Track"] == selected_track]["RaceNumber"].dropna().unique()
         selected_race = st.selectbox("🏁 Race", sorted(race_options))
-        filtered_df = filtered_df[filtered_df["RaceNumber"] == selected_race]
 
-    # Model selection with immediate update
-    with col_model:
-        new_model = st.selectbox(
-            "📊 Model", 
-            list(MODEL_FILES.keys()),
-            index=list(MODEL_FILES.keys()).index(st.session_state["selected_model"]),
-            key="model_selectbox"
-        )
-        
-        if new_model != st.session_state["selected_model"]:
-            st.session_state["selected_model"] = new_model
-            st.rerun()
-    
-    # Download buttons (stacked vertically)
+    # Download buttons
     with col_download:
         st.markdown('<div class="download-container">', unsafe_allow_html=True)
         
-        # Race download button (top)
-        race_csv = filtered_df.to_csv(index=False).encode("utf-8")
+        race_csv = day_df[day_df["RaceNumber"] == selected_race].to_csv(index=False).encode("utf-8")
         st.download_button(
             label="📥 Download Race CSV",
             data=race_csv,
             file_name=f"{selected_track}_Race{selected_race}_{selected_date}.csv",
-            mime="text/csv",
-            key="race_download"
+            mime="text/csv"
         )
-        
-        # Day download button (bottom)
+
         day_csv = day_df.to_csv(index=False).encode("utf-8")
         st.download_button(
             label="📥 Download Day CSV",
             data=day_csv,
-            file_name=f"All_Races_{selected_date}_{st.session_state['selected_model']}.csv",
-            mime="text/csv",
-            key="day_download"
+            file_name=f"All_Races_{selected_date}_RandomForest.csv",
+            mime="text/csv"
         )
-        
         st.markdown('</div>', unsafe_allow_html=True)
 
-# --- Main Display ---
-st.markdown(f"""
-    ## 🏇 Race on {selected_date.strftime('%d %b %Y')} | {selected_track} | Race {selected_race} | Model: {st.session_state['selected_model']}
-""")
+# --- Merge odds from other models ---
+def add_model_odds(main_df, other_df, model_name):
+    # Merge based on RaceId & RunnerId to align horses correctly
+    odds_col_name = f"Odds_{model_name}"
+    other_odds = other_df[["RaceId", "RunnerId", "Odds"]].rename(columns={"Odds": odds_col_name})
+    return main_df.merge(other_odds, on=["RaceId", "RunnerId"], how="left")
 
-# Filter and display race data
 filtered_df = day_df[(day_df["Track"] == selected_track) & (day_df["RaceNumber"] == selected_race)]
-filtered_df = filtered_df.sort_values(by="TabNo", ascending=True)
 
-# Configure display columns
+filtered_df = add_model_odds(filtered_df, logistic_df, "Logistic")
+filtered_df = add_model_odds(filtered_df, xgboost_df, "XGBoost")
+filtered_df = add_model_odds(filtered_df, bayesian_df, "BayesianNew")
+
+# --- Display ---
 DISPLAY_COLS = [
     "Track", "TabNo", "Name", "Jockey.FullName", "Trainer.FullName",
-    "NormalizedWinProbability", 'Odds', "Price", "Weight", "Barrier_x", "Last10",
-    "RaceId", "RunnerId"
+    "NormalizedWinProbability", "Odds", "Odds_Logistic", "Odds_XGBoost", "Odds_BayesianNew",
+    "Price", "Weight", "Barrier_x", "Last10", "RaceId", "RunnerId"
 ]
 
 FRIENDLY_NAMES = {
@@ -157,13 +144,22 @@ FRIENDLY_NAMES = {
     "Barrier_x": "Barrier",
     "Last10": "Last 10",
     "RaceId": "Race ID",
-    "RunnerId": "Runner ID"
+    "RunnerId": "Runner ID",
+    "Odds": "Odds_RF",
+    "Odds_Logistic": "Odds_Log",
+    "Odds_XGBoost" :"Odds_Xg",
+    "Odds_BayesianNew": "Odds_Bayes"
+    
 }
 
-# Format and display the dataframe
 display_df = filtered_df[DISPLAY_COLS].rename(columns=FRIENDLY_NAMES).reset_index(drop=True)
-display_df['Odds'] = display_df['Odds'].astype(float).round(3)  
+for col in ["Odds_RF", "Odds_Log", "Odds_Xg", "Odds_Bayes"]:
+    display_df[col] = display_df[col].astype(float).round(3)
+
 display_df.index += 1
 display_df.index.name = "No."
 
+st.markdown(f"""
+    ## 🏇 Race on {selected_date.strftime('%d %b %Y')} | {selected_track} | Race {selected_race} | Model: RandomForest + Other Odds
+""")
 st.dataframe(display_df, use_container_width=True, height=550)
