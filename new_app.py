@@ -29,9 +29,9 @@ st.set_page_config(page_title="Horse Racing Dashboard", layout="wide")
 
 # Model files
 MODEL_FILES = {
-    "RandomForest": "random_forest.csv",
-    "Logistic": "logistic.csv",
-    "XGBoost": "xgboost.csv",
+    "RandomForest": "random_.csv",
+    "Logistic": "logistic_.csv",
+    "XGBoost": "xgboost_.csv",
 }
 
 # Load data
