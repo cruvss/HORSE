@@ -42,6 +42,7 @@ def load_data(filename):
 
 try:
     base_df = load_data(MODEL_FILES["Logistic"])
+    base_df = base_df.drop_duplicates()
     # logistic_df = load_data(MODEL_FILES["Logistic"])
     # xgboost_df = load_data(MODEL_FILES["XGBoost"])
     # bayesian_df = load_data(MODEL_FILES["BayesianNew"])
