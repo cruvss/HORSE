@@ -29,9 +29,10 @@ st.set_page_config(page_title="Horse Racing Dashboard", layout="wide")
 
 # Model files
 MODEL_FILES = {
-    "RandomForest": "random_.csv",
-    "Logistic": "logistic_.csv",
-    "XGBoost": "xgboost_.csv",
+    # "RandomForest": "random_forest.csv",
+    "Logistic": "main.csv",
+    # "XGBoost": "xgboost.csv",
+    # "BayesianNew": "bayesian.csv"
 }
 
 # Load data
@@ -40,9 +41,10 @@ def load_data(filename):
     return pd.read_csv(filename)
 
 try:
-    base_df = load_data(MODEL_FILES["RandomForest"])
-    logistic_df = load_data(MODEL_FILES["Logistic"])
-    xgboost_df = load_data(MODEL_FILES["XGBoost"])
+    base_df = load_data(MODEL_FILES["Logistic"])
+    # logistic_df = load_data(MODEL_FILES["Logistic"])
+    # xgboost_df = load_data(MODEL_FILES["XGBoost"])
+    # bayesian_df = load_data(MODEL_FILES["BayesianNew"])
 except FileNotFoundError as e:
     st.error(f"Data file not found: {e}")
     st.stop()
@@ -122,14 +124,14 @@ def add_model_odds(main_df, other_df, model_name):
 
 filtered_df = day_df[(day_df["Track"] == selected_track) & (day_df["RaceNumber"] == selected_race)]
 
-filtered_df = add_model_odds(filtered_df, logistic_df, "Logistic")
-filtered_df = add_model_odds(filtered_df, xgboost_df, "XGBoost")
-#filtered_df = add_model_odds(filtered_df, bayesian_df, "BayesianNew")
+# filtered_df = add_model_odds(filtered_df, logistic_df, "Logistic")
+# filtered_df = add_model_odds(filtered_df, xgboost_df, "XGBoost")
+# filtered_df = add_model_odds(filtered_df, bayesian_df, "BayesianNew")
 
 # --- Display ---
 DISPLAY_COLS = [
     "Track", "TabNo", "Name", "Jockey.FullName", "Trainer.FullName",
-     "Odds", "Odds_Logistic", "Odds_XGBoost",
+   "Odds",
     "Price", "Weight", "Barrier_x", "Last10", "RaceId", "RunnerId"
 ]
 
@@ -138,25 +140,21 @@ FRIENDLY_NAMES = {
     "Name": "Horse",
     "Jockey.FullName": "Jockey",
     "Trainer.FullName": "Trainer",
-    #"NormalizedWinProbability": "Win Prob",
     "Barrier_x": "Barrier",
     "Last10": "Last 10",
     "RaceId": "Race ID",
     "RunnerId": "Runner ID",
-    "Odds": "Odds_RF",
-    "Odds_Logistic": "Odds_Log",
-    "Odds_XGBoost" :"Odds_Xg",
-    
+    "Odds": "Odds_Log", 
 }
 
 display_df = filtered_df[DISPLAY_COLS].rename(columns=FRIENDLY_NAMES).reset_index(drop=True)
-for col in ["Odds_RF", "Odds_Log", "Odds_Xg"]:
+for col in ["Odds_Log"]:
     display_df[col] = display_df[col].astype(float).round(3)
 
 display_df.index += 1
 display_df.index.name = "No."
 
 st.markdown(f"""
-    ## 🏇 Race on {selected_date.strftime('%d %b %Y')} | {selected_track} | Race {selected_race} | Model: RandomForest + Other Odds
+    ## 🏇 Race on {selected_date.strftime('%d %b %Y')} | {selected_track} | Race {selected_race} 
 """)
 st.dataframe(display_df, use_container_width=True, height=550)
